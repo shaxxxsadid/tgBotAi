@@ -123,7 +123,7 @@ bot.command(('CreateImageGPT'), async (ctx) => {
 })
 
 bot.on(message('voice'), async ctx => {
-    ctx.session ??= INITIAL_SESSION
+    ctx.session != null ? INITIAL_SESSION : ctx.session
     try {
         await ctx.reply(code('Сообщение принято. Ожидайте...'))
         //ogg to mp3 convert
@@ -197,7 +197,7 @@ const ChatGPTChat = async (ctx) => {
 }
 
 bot.on(message('text'), async ctx => {
-    ctx.session ??= INITIAL_SESSION
+    ctx.session != null ? INITIAL_SESSION : ctx.session
     switch (jobs) {
         case 0: await ctx.reply(code('Выберите действие на панели команд'));
             break;
