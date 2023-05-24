@@ -21,7 +21,6 @@ class OpenAI {
             const response = await this.openai.createChatCompletion({
                 model: "gpt-3.5-turbo",
                 messages: messages,
-                
             })
             console.log(response.status)
             

@@ -26,6 +26,7 @@ class OpenWeatherMap {
             return (`Погода в городе ${city}:\n\n🌡️Температура:  ${main.temp}°C  ${weatherDescription}\n🍃Ощущается как: ${main.feels_like}°C\n😡Давление: ${main.pressure}мм рт.ст.\n💦Влажность: ${main.humidity}%`)
         } catch (error) {
             console.log(`Не удалось получить информацию о погоде: ${error.message}`);
+            return null
         }
     }
 }
