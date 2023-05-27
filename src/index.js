@@ -7,28 +7,35 @@ import { openAi } from "./API/OpenAI.js";
 import { openWeatherMap } from './API/OpenWeatherMap.js';
 import { createReadStream, readFileSync } from "fs";
 
-let jobsWithGPT = 0
-let jobs = 0
-let size = "1024x1024"
+let jobsWithGPT = 0;
+let jobs = 0;
+let size = "1024x1024";
 const MAX_REQUESTS_PER_SECOND = 10;
 const requestCounts = {};
-
-// Доделать код
+const INITIAL_SESSION = {
+    users: []
+};
+let news = ''; // переменная для хранения новостей
+const grade = {
+    like: 0,
+    dislike: 0
+};// Обьект для хранения лайков и дизлайков 
+// Getting prompt from txt file
 const promptGet = (prompt) => {
     try {
         const data = readFileSync(`./src/Prompts/${prompt}.txt`, 'utf8');
         var myVar = data;
         return myVar;
     } catch (err) {
-        console.error(err);
+        console.error("Error while getting 'prompt' in txt file", err);
     }
 }
+// Anti spam messages
 setInterval(() => {
     for (const userId in requestCounts) {
         requestCounts[userId] = 0;
     }
 }, 2000);
-
 //template keyboard
 const keyboard = Markup.keyboard([
     [{ text: '/Ask - Начать работу c Chat GPT' },
@@ -50,18 +57,20 @@ const inlineKeyboardPrompt = Markup.inlineKeyboard([
     [{ text: "Хотите использвать promt: developer mode?", callback_data: "Prompt-01" }],
     [{ text: "Хотите использвать promt: Расширенный GPT?", callback_data: "Prompt-02" }],
 ]).resize();
-const INITIAL_SESSION = {}
-
+//template answer bot
 const templateCommand = async (ctx, text, jobsAsk, jobsGPT, session, keyboard) => {
     ctx.session = session
     await ctx.reply(text, keyboard)
     jobs = jobsAsk;
     jobsWithGPT = jobsGPT;
 }
-
+//Config bot
 const bot = new Telegraf(configure.get('BOT_TOKEN'))
-const whitelist = [812466464, 2039520204, 859006425, 1580855418, 960024617]
+const whitelist = [812466464, 2039520204, 859006425, 1580855418, 960024617]// Список пользователей
+const adminChatId = 812466464 // Админы
+const subscribers = [812466464]// Новостные подписчики
 bot.use(session())
+//Middleware
 bot.use((ctx, next) => {
     const userId = ctx.from.id
     const lastName = (ctx.from.last_name !== null && ctx.from.last_name !== undefined) ? "Фамилия: " + ctx.from.last_name : "Фамилия: Отсутствует"
@@ -82,16 +91,56 @@ bot.use((ctx, next) => {
     }
 })
 
-bot.command(('start'), async (ctx) => {
-    ctx.replyWithSticker('https://media.discordapp.net/attachments/665424976781770759/1083704241476075580/AgnisKokFireplace.gif')
-    ctx.telegram.sendMessage(ctx.chat.id,
-        `Приветствую тебя ${ctx.message.chat.first_name}${(ctx.message.chat.last_name !== null && ctx.message.chat.last_name !== undefined) ? " " + ctx.message.chat.last_name : ""}! Я твой помощник в работе с chat GPT и в работе с файлами\nАвтор бота: @shaxxxsadid`,
-        inlineKeyboard
-    )
-});
-
 bot.action('New', async (ctx) => {
     templateCommand(ctx, 'Вы сменили тему диалога, жду вашего голосового или текствого сообщения', 1, 1, {})
+})
+
+bot.action('Like', async (ctx) => {
+    ctx.session = INITIAL_SESSION
+    const users = ctx.session.users
+    users.find(user => user.id === ctx.chat.id) ? users : users.push({ id: ctx.chat.id, like: 0, disLike: 0 })
+    const userInfo = users.find(user => user.id === ctx.chat.id)
+    if (userInfo.id === ctx.chat.id && userInfo.like == 1) {
+        ctx.reply('Вы уже отреагировали!')
+    } else {
+        bot.telegram.sendMessage(812466464, code(`Пользователь: @${ctx.from.username} лайкнул вашу новость`))
+        ctx.reply('Ваша оценка принята...')
+        if (grade.dislike === 0) {
+            grade.like++
+        } else {
+            grade.like++
+            grade.dislike--
+        }
+        const index = users.findIndex(user => user.id === ctx.chat.id);
+        if (index !== -1) {
+            users[index].like = 1;
+            users[index].disLike = 0;
+        }
+    }
+})
+
+bot.action('Dislike', async (ctx) => {
+    ctx.session = INITIAL_SESSION
+    const users = ctx.session.users
+    users.find(user => user.id === ctx.chat.id) ? users : users.push({ id: ctx.chat.id, like: 0, disLike: 0 })
+    const userInfo = users.find(user => user.id === ctx.chat.id)
+    if (userInfo.id === ctx.chat.id && userInfo.disLike == 1) {
+        ctx.reply('Вы уже отреагировали!')
+    } else {
+        bot.telegram.sendMessage(812466464, code(`Пользователь: @${ctx.from.username} дизлайкнул вашу новость`))
+        ctx.reply('Ваша оценка принята...')
+        if (grade.like === 0) {
+            grade.dislike++
+        } else {
+            grade.like--
+            grade.dislike++
+        }
+        const index = users.findIndex(user => user.id === ctx.chat.id);
+        if (index !== -1) {
+            users[index].disLike = 1;
+            users[index].like = 0;
+        }
+    }
 })
 
 bot.action('Prompt-01', async (ctx) => {
@@ -128,6 +177,13 @@ bot.action('CreateImageGPT', async (ctx) => {
     templateCommand(ctx, 'Вы сменили тему диалога, жду вашего голосового или текствого сообщения', 4, 2)
 })
 // Commands bot
+bot.command(('start'), async (ctx) => {
+    await ctx.replyWithSticker('https://media.discordapp.net/attachments/665424976781770759/1083704241476075580/AgnisKokFireplace.gif')
+    ctx.telegram.sendMessage(ctx.chat.id,
+        `Приветствую тебя ${ctx.message.chat.first_name}${(ctx.message.chat.last_name !== null && ctx.message.chat.last_name !== undefined) ? " " + ctx.message.chat.last_name : ""}! Я твой помощник в работе с chat GPT и в работе с файлами\nАвтор бота: @shaxxxsadid`,
+        inlineKeyboard
+    )
+});
 //new session
 bot.command('New', async (ctx) => {
     templateCommand(ctx, 'Жду вашего голосового или текствого сообщения', 1, 1, {})
@@ -151,7 +207,37 @@ bot.command(('CreateImageGPT'), async (ctx) => {
     jobs = 4;
     jobsWithGPT = 2;
 })
+// Admin commands
+// Add News
+bot.command('add_news', async ctx => {
+    const text = ctx.message.text.substring('/add_news'.length);
+    news += text + '\n\n';
+    ctx.reply(`📢 Новость добавлена:\n\n${text}`);
+});
+// Send News
+bot.command('send_news', ctx => {
+    if (ctx.chat.id === adminChatId) {
+        subscribers.forEach(async chatId => {
+            await ctx.telegram.sendSticker(chatId, 'https://tenor.com/ru/view/whyareyougay-uganda-gay-gif-14399349')
+            ctx.telegram.sendMessage(chatId, '📢 Новости:\n\n' + news, {
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: "❤️", callback_data: "Like" }, { text: "👎", callback_data: "Dislike" }]
+                    ]
+                },
+            })
+        });
+        grade.like = 0
+        grade.dislike = 0
+        ctx.session.users = []
+        ctx.reply('👍 Новости отправлены подписчикам.');
+        setTimeout(() => { news = ''; }, 200); // очистка переменной новостей после отправки
+    } else {
+        ctx.reply('❌ Ошибка! Эта команда доступна только администратору бота.');
+    }
+});
 
+//Convert mp3 to text
 const textMp3 = async (ctx, fileType) => {
     //ogg to mp3 convert
     const link = jobs == 2 ? await ctx.telegram.getFileLink(ctx.message.video.file_id) : await ctx.telegram.getFileLink(ctx.message.voice.file_id)
@@ -166,7 +252,6 @@ const textMp3 = async (ctx, fileType) => {
 //Function for work with ChatGPT
 const ChatGPTChat = async (ctx, text) => {
     const chatId = ctx.chat.id
-    console.log(chatId)
     const session = ctx.session
     try {
         await ctx.reply(code('Сообщение принято. Ожидайте...'))
@@ -174,7 +259,6 @@ const ChatGPTChat = async (ctx, text) => {
             case 0: ctx.reply(code('Упс! Вы не выбрали с какой фунцией GPT 3.5 будуете работать'))
                 break;
             case 1:
-                console.log(1)
                 session[chatId] = session[chatId] || []
                 //session save ask
                 session[chatId].push({ role: openAi.roles.USER, content: text })
