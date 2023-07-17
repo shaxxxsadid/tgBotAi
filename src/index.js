@@ -15,6 +15,9 @@ const requestCounts = {};
 const INITIAL_SESSION = {
     users: []
 };
+
+
+
 let news = ''; // переменная для хранения новостей
 const grade = {
     like: 0,
@@ -38,8 +41,7 @@ setInterval(() => {
 }, 2000);
 //template keyboard
 const keyboard = Markup.keyboard([
-    [{ text: '/Ask - Начать работу c Chat GPT' },
-    { text: '/New - Сменить тему диалога' }],
+    [{ text: '/Ask - Начать работу c Chat GPT' }],
     [{ text: '/CreateImageGPT - Создать изображение' }],
     [{ text: '/VideotoMP3 - Конвертировать видео в MP3' },
     { text: '/weather - Узнать погоду' }],
@@ -68,7 +70,7 @@ const templateCommand = async (ctx, text, jobsAsk, jobsGPT, session, keyboard) =
 const bot = new Telegraf(configure.get('BOT_TOKEN'))
 const whitelist = [812466464, 2039520204, 859006425, 1580855418, 960024617]// Список пользователей
 const adminChatId = 812466464 // Админы
-const subscribers = [812466464]// Новостные подписчики
+const subscribers = [812466464, 2039520204, 859006425, 1580855418, 960024617]// Новостные подписчики 
 bot.use(session())
 //Middleware
 bot.use((ctx, next) => {
@@ -92,11 +94,15 @@ bot.use((ctx, next) => {
 })
 
 bot.action('New', async (ctx) => {
-    templateCommand(ctx, 'Вы сменили тему диалога, жду вашего голосового или текствого сообщения', 1, 1, {})
+    ctx.session ??= INITIAL_SESSION
+    const session = ctx.session
+    templateCommand(ctx, 'Вы сменили тему диалога, жду вашего голосового или текствого сообщения', 1, 1)
+    let id = ctx.chat.id
+    session[id] = []
 })
 
 bot.action('Like', async (ctx) => {
-    ctx.session = INITIAL_SESSION
+    ctx.session ??= INITIAL_SESSION
     const users = ctx.session.users
     users.find(user => user.id === ctx.chat.id) ? users : users.push({ id: ctx.chat.id, like: 0, disLike: 0 })
     const userInfo = users.find(user => user.id === ctx.chat.id)
@@ -120,7 +126,7 @@ bot.action('Like', async (ctx) => {
 })
 
 bot.action('Dislike', async (ctx) => {
-    ctx.session = INITIAL_SESSION
+    ctx.session ??= INITIAL_SESSION
     const users = ctx.session.users
     users.find(user => user.id === ctx.chat.id) ? users : users.push({ id: ctx.chat.id, like: 0, disLike: 0 })
     const userInfo = users.find(user => user.id === ctx.chat.id)
@@ -144,14 +150,14 @@ bot.action('Dislike', async (ctx) => {
 })
 
 bot.action('Prompt-01', async (ctx) => {
-    ctx.session = INITIAL_SESSION
+    ctx.session ??= INITIAL_SESSION
     jobs = 1;
     jobsWithGPT = 1;
     ChatGPTChat(ctx, await promptGet('prompt'))
 })
 
 bot.action('Prompt-02', async (ctx) => {
-    ctx.session = INITIAL_SESSION
+    ctx.session ??= INITIAL_SESSION
     jobs = 1;
     jobsWithGPT = 1;
     ChatGPTChat(ctx, await promptGet('prompt2'))
@@ -184,10 +190,6 @@ bot.command(('start'), async (ctx) => {
         inlineKeyboard
     )
 });
-//new session
-bot.command('New', async (ctx) => {
-    templateCommand(ctx, 'Жду вашего голосового или текствого сообщения', 1, 1, {})
-})
 //ChatGPT
 bot.command('Ask', async (ctx) => {
     templateCommand(ctx, 'Жду вашего голосового или текствого сообщения', 1, 1, INITIAL_SESSION, inlineKeyboardPrompt)
@@ -216,6 +218,7 @@ bot.command('add_news', async ctx => {
 });
 // Send News
 bot.command('send_news', ctx => {
+    ctx.session ??= INITIAL_SESSION
     if (ctx.chat.id === adminChatId) {
         subscribers.forEach(async chatId => {
             await ctx.telegram.sendSticker(chatId, 'https://tenor.com/ru/view/whyareyougay-uganda-gay-gif-14399349')
@@ -230,6 +233,7 @@ bot.command('send_news', ctx => {
         grade.like = 0
         grade.dislike = 0
         ctx.session.users = []
+        
         ctx.reply('👍 Новости отправлены подписчикам.');
         setTimeout(() => { news = ''; }, 200); // очистка переменной новостей после отправки
     } else {
@@ -251,6 +255,7 @@ const textMp3 = async (ctx, fileType) => {
 
 //Function for work with ChatGPT
 const ChatGPTChat = async (ctx, text) => {
+    ctx.session ??= INITIAL_SESSION
     const chatId = ctx.chat.id
     const session = ctx.session
     try {
