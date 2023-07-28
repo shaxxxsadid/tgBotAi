@@ -15,7 +15,6 @@ const requestCounts = {};
 const INITIAL_SESSION = {
     users: []
 };
-
 let news = ''; // переменная для хранения новостей
 const grade = {
     like: 0,
