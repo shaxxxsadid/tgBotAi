@@ -1,6 +1,6 @@
 {
-    "BOT_TOKEN": "5961895513:AAHE3k-vc9EXvzddCR_w7jMlo5S_mR3Kk3Y",
-    "OPENAI_KEY": "sk-ijklmnopqrstuvwxijklmnopqrstuvwxijklmnop",
-    "OPENWEATHERMAP_KEY": "b63b4bb5c694307f195ebb7eb3933d1d",
-    "GIGACHAT_KEY": "ZmY5MWFhYTUtOGE4YS00ZTllLWFmMmUtOWU1OTUzNDI5ZTJlOmZjMWNiNmFiLTczNzMtNGRhMy1iOTU3LTFkYTg1N2Q4MzcyNQ=="
+    "BOT_TOKEN": "",
+    "OPENAI_KEY": "",
+    "OPENWEATHERMAP_KEY": "",
+    "GIGACHAT_KEY": ""
 }
